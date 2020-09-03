@@ -1,0 +1,77 @@
+version: "3.3"
+
+services:
+  traefik:
+    image: "traefik:v2.2"
+    container_name: "traefik"
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "${PWD}/traefik.toml:/etc/traefik/traefik.toml"
+      - "${PWD}/dynamic.toml:/etc/traefik/dynamic.toml"
+    networks:
+      - internal
+      - traefik-public
+
+  portainer:
+    image: portainer/portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 9000:9000
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.portainer-redirect-websecure.redirectscheme.scheme=https
+      - traefik.http.routers.portainer-web.rule=Host(`portainer.example.com`)
+      - traefik.http.routers.portainer-web.entrypoints=web
+      - traefik.http.routers.portainer-web.middlewares=portainer-redirect-websecure
+      - traefik.http.routers.portainer-websecure.entrypoints=websecure
+      - traefik.http.routers.portainer-websecure.rule=Host(`portainer.example.com`)
+      - traefik.tags= traefik-public
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.portainer-websecure.tls=true
+      - traefik.http.routers.portainer-websecure.tls.certresolver=myresolver
+      - traefik.http.services.portainer-global.loadbalancer.server.port=9000
+    networks:
+      - internal
+      - traefik-public
+
+  webmin-proxy:
+    image: qoomon/docker-host
+    restart: always
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.webmin-redirect-websecure.redirectscheme.scheme=https
+      - traefik.http.routers.webmin-web.rule=Host(`webhost.example.com`)
+      - traefik.http.routers.webmin-web.entrypoints=web
+      - traefik.http.routers.webmin-web.middlewares=webmin-redirect-websecure
+      - traefik.http.routers.webmin-websecure.entrypoints=websecure
+      - traefik.http.routers.webmin-websecure.rule=Host(`webhost.example.com`)
+      - traefik.tags= traefik-public
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.webmin-websecure.tls=true
+      - traefik.http.routers.webmin-websecure.tls.certresolver=myresolver
+      - traefik.http.services.webmin-global.loadbalancer.server.port=10000
+    networks:
+      - internal
+      - traefik-public
+
+volumes:
+  letsencrypt:
+  portainer_data:
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    external: false

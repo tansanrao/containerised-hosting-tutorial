@@ -1,0 +1,37 @@
+[tls]
+  [tls.options]
+    [tls.options.minTLS12]
+      minVersion = "VersionTLS12"
+      preferServerCipherSuites = true
+      sniStrict = true
+      cipherSuites = [
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
+        "TLS_AES_128_GCM_SHA256",
+        "TLS_AES_256_GCM_SHA384",
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ]
+      curvePreferences = [
+        "CurveP521",
+        "CurveP384"
+      ]
+
+[http]
+  [http.middlewares]
+    [http.middlewares.secHeaders]
+      [http.middlewares.secHeaders.headers]
+        browserXssFilter= true
+        contentTypeNosniff= true
+        sslRedirect= true
+    #HSTS Configuration
+
+    #Set this to false if you want to exclude subdomains from HSTS
+        stsIncludeSubdomains=true
+
+    #Set this to true if you want to add your domain to the hstspreload list.
+    #This operation is very difficult and time consuming if not impossible to revert.
+    #Make sure you read the explanation and do your research properly.
+        stsPreload= false
+        
+        stsSeconds= 15768000
