@@ -1,0 +1,56 @@
+version: "3.3"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_DATABASE=wordpress
+    volumes:
+      - mysql:/var/lib/mysql
+    command: "--default-authentication-plugin=mysql_native_password"
+    networks:
+      - private
+
+  wordpress:
+    depends_on:
+      - mysql
+    container_name: wordpress
+    restart: unless-stopped
+    image: wordpress:5.5.0-php7.4-apache
+    env_file: .env
+    environment:
+      - WORDPRESS_DB_HOST=mysql:3306
+      - WORDPRESS_DB_USER=$MYSQL_USER
+      - WORDPRESS_DB_PASSWORD=$MYSQL_PASSWORD
+      - WORDPRESS_DB_NAME=wordpress
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.redirect-websecure.redirectscheme.scheme=https
+      - traefik.http.routers.wordpress-web.rule=Host(`example.com`)
+      - traefik.http.routers.wordpress-web.entrypoints=web
+      - traefik.http.routers.wordpress-web.middlewares=redirect-websecure
+      - traefik.http.routers.wordpress-websecure.entrypoints=websecure
+      - traefik.http.routers.wordpress-websecure.rule=Host(`example.com`)
+      - traefik.tags=traefik-public
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.wordpress-websecure.tls=true
+      - traefik.http.routers.wordpress-websecure.tls.certresolver=myresolver
+    volumes:
+      - wordpress:/var/www/html/wp-content
+      - ./upload.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - private
+      - traefik-public
+
+volumes:
+  wordpress:
+  mysql:
+
+networks:
+  private:
+    driver: bridge
+  traefik-public:
+    external: true
